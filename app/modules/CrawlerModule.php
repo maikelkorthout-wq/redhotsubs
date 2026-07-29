@@ -125,6 +125,10 @@ class CrawlerModule
     public static function userExists($user)
     {
         try {
+            if (!static::hasOauthCredentials()) {
+                return false;
+            }
+
             if (strpos($user, '/') !== false) {
                 $user = substr($user, strpos($user, '/') + 1);
             }
@@ -160,6 +164,10 @@ class CrawlerModule
     public static function getSubStatus($sub)
     {
         try {
+            if (!static::hasOauthCredentials()) {
+                return null;
+            }
+
             $crawler = new RFCrawler('r/' . $sub . '/about/.json', env('APP_USERAGENT'), [], [
                 'user' => env('REDDIT_CLIENT_ID'),
                 'password' => env('REDDIT_CLIENT_SECRET')
@@ -204,6 +212,10 @@ class CrawlerModule
     public static function querySubDescription($sub)
     {
         try {
+            if (!static::hasOauthCredentials()) {
+                return null;
+            }
+
             $crawler = new RFCrawler('r/' . $sub . '/about/.json', env('APP_USERAGENT'), [], [
                 'user' => env('REDDIT_CLIENT_ID'),
                 'password' => env('REDDIT_CLIENT_SECRET')
@@ -251,5 +263,13 @@ class CrawlerModule
     public static function getRemoteUrl()
     {
         return RFCrawler::URL_REDDIT;
+    }
+
+    /**
+     * @return bool
+     */
+    private static function hasOauthCredentials(): bool
+    {
+        return (strlen((string)env('REDDIT_CLIENT_ID')) > 0) && (strlen((string)env('REDDIT_CLIENT_SECRET')) > 0);
     }
 }
