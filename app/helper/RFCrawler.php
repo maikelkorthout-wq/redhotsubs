@@ -8,7 +8,8 @@ class RFCrawler
     /**
      * Reddit URL
      */
-    public const URL_REDDIT = "https://oauth.reddit.com";
+    public const URL_REDDIT = "https://www.reddit.com";
+    private const URL_REDDIT_OAUTH = "https://oauth.reddit.com";
 
     /**
      * Fetch types
@@ -54,6 +55,13 @@ class RFCrawler
     private string $auth_bearer;
 
     /**
+     * @var bool
+     *
+     * Whether to use the OAuth JSON API instead of public RSS feeds.
+     */
+    private bool $uses_oauth;
+
+    /**
      * Constructor for instantiation
     * 
     * @param string $url
@@ -64,13 +72,13 @@ class RFCrawler
     */
     public function __construct(string $url, string $user_agent = '', $args = array(), $credentials = array())
     {
-        $this->url = self::URL_REDDIT . '/' . $url;
-
-        $this->user_agent = $user_agent;
+        $this->uses_oauth = !empty($credentials['user']) && !empty($credentials['password']);
+        $baseUrl = $this->uses_oauth ? self::URL_REDDIT_OAUTH : self::URL_REDDIT;
+        $this->url = $baseUrl . '/' . trim($url, '/');
+        $this->user_agent = (strlen($user_agent) > 0) ? $user_agent : 'RedHotSubs/1.0 (public RSS reader)';
         $this->args = $args;
         $this->credentials = $credentials;
-
-        $this->auth_bearer = $this->auth($credentials);
+        $this->auth_bearer = $this->uses_oauth ? $this->auth($credentials) : '';
     }
  
     /**
@@ -87,7 +95,8 @@ class RFCrawler
         try {
             $result = array();
             
-            $url = "{$this->url}{$type}/.json";
+            $path = (strlen($type) > 0) ? $this->url . '/' . $type : $this->url;
+            $url = "{$path}/." . ($this->uses_oauth ? 'json' : 'rss');
             $firstArg = false;
             
             foreach ($this->args as $key => $value) {
@@ -99,6 +108,10 @@ class RFCrawler
                 }
             }
             
+            if (!$this->uses_oauth) {
+                return $this->fetchRssPosts($url, $url_filter, $url_must_contain);
+            }
+
             $data = $this->request($url, [
                 "Authorization: Bearer {$this->auth_bearer}"
             ]);
@@ -178,7 +191,12 @@ class RFCrawler
      */
     public function fetchUrl()
     {
+        if (!$this->uses_oauth) {
+            throw new \Exception('This Reddit metadata endpoint requires OAuth credentials. Public feeds are available through post browsing only.');
+        }
+
         $firstArg = false;
+        $url = $this->url;
         
         foreach ($this->args as $key => $value) {
             if (!$firstArg) {
@@ -208,6 +226,107 @@ class RFCrawler
         ], 'grant_type=client_credentials');
 
         return ((isset($response->access_token)) ? $response->access_token : null);
+    }
+
+    /**
+     * Normalize public Reddit RSS entries to the legacy JSON item shape.
+     *
+     * @param string $url
+     * @param array $url_filter
+     * @param array $url_must_contain
+     * @return array
+     * @throws \Exception
+     */
+    private function fetchRssPosts(string $url, array $url_filter, array $url_must_contain): array
+    {
+        $rss = $this->requestRaw($url, []);
+        $feed = @simplexml_load_string($rss, 'SimpleXMLElement', LIBXML_NOCDATA);
+        if ($feed === false) {
+            throw new \Exception('Reddit public feed could not be read.');
+        }
+
+        $result = [];
+        $atom = $feed->children('http://www.w3.org/2005/Atom');
+
+        foreach ($atom->entry as $entry) {
+            $media = $this->rssMediaUrl((string)$entry->content);
+            if (strlen($media) === 0) {
+                continue;
+            }
+
+            $cont = false;
+            foreach ($url_filter as $uf) {
+                if (strpos($media, $uf) !== false) {
+                    $cont = true;
+                    break;
+                }
+            }
+
+            if ($cont || ((count($url_must_contain) > 0) && (!$this->containsAny($media, $url_must_contain)))) {
+                continue;
+            }
+
+            $permalink = '';
+            foreach ($entry->link as $link) {
+                $attributes = $link->attributes();
+                if (isset($attributes['href'])) {
+                    $permalink = (string)$attributes['href'];
+                    break;
+                }
+            }
+
+            $author = '';
+            if (isset($entry->author->name)) {
+                $author = preg_replace('/^\/u\//', '', (string)$entry->author->name);
+            }
+
+            $ident = (string)$entry->id;
+            $created = strtotime((string)$entry->published);
+            $categoryAttributes = $entry->category->attributes();
+            $item = new \stdClass();
+            $item->title = (string)$entry->title;
+            $item->link = $permalink;
+            $item->media = $media;
+            $item->author = $author;
+            $item->all = (object)[
+                'id' => preg_replace('/^t3_/', '', $ident),
+                'name' => $ident,
+                'permalink' => parse_url($permalink, PHP_URL_PATH) ?: $permalink,
+                'subreddit' => isset($categoryAttributes['term']) ? trim((string)$categoryAttributes['term']) : '',
+                'domain' => parse_url($media, PHP_URL_HOST) ?: '',
+                'thumbnail' => $media,
+                'url' => $media,
+                'created_utc' => ($created === false) ? time() : $created,
+                'num_comments' => 0,
+                'ups' => 0
+            ];
+            $result[] = $item;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Extract the preview image from a Reddit Atom entry.
+     *
+     * @param string $content
+     * @return string
+     */
+    private function rssMediaUrl(string $content): string
+    {
+        $dom = new \DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>' . html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        libxml_clear_errors();
+
+        foreach ($dom->getElementsByTagName('img') as $image) {
+            $src = $image->getAttribute('src');
+            if (strlen($src) > 0) {
+                return $src;
+            }
+        }
+
+        return '';
     }
 
      /**
@@ -241,6 +360,20 @@ class RFCrawler
      */
     private function request($url, $header, $data = null)
     {
+        return json_decode($this->requestRaw($url, $header, $data));
+    }
+
+    /**
+     * Perform a Reddit request and return its raw response.
+     *
+     * @param string $url
+     * @param array $header
+     * @param mixed $data
+     * @return string
+     * @throws \Exception
+     */
+    private function requestRaw(string $url, array $header, $data = null): string
+    {
         $ch = curl_init($url);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -261,6 +394,6 @@ class RFCrawler
 
         curl_close($ch);
         
-        return json_decode($response);
+        return $response;
     }
 }

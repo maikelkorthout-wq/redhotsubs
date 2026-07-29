@@ -116,7 +116,7 @@ class CronjobsController extends BaseController {
 			$rndsel = rand(0, $subs->count() - 1);
 			$selsub = $subs->get($rndsel)->get('sub_ident');
 			
-			$data = CrawlerModule::fetchContent($selsub . '/', 'hot', '', array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'));
+			$data = CrawlerModule::fetchContent($selsub . '/', 'hot', '', array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'));
 			
 			$posted = null;
 

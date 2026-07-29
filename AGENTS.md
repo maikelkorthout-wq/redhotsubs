@@ -30,4 +30,4 @@ The startup update script keeps dependencies fresh (`composer install`, `npm ins
 
 ### Reddit content
 
-Browsing real subreddit content needs `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` in `.env` (Reddit OAuth app). Without them the UI shell, auth, and pages render, but no Reddit posts load. SMTP and the Twitter bot are optional and off by default.
+Leave `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET` empty to browse public Reddit RSS feeds without credentials. The crawler preserves the existing post response shape and falls back automatically. RSS is rate-limited by Reddit and does not provide OAuth-only metadata lookups or cursor pagination; set both credentials only when those capabilities are needed. SMTP and the Twitter bot are optional and off by default.

@@ -49,7 +49,7 @@ class ContentController extends BaseController {
 				$sortStyle = 'param';
 			}
 			
-			$content = CrawlerModule::fetchContent($sub, $sorting, $after, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'), $sortStyle);
+			$content = CrawlerModule::fetchContent($sub, $sorting, $after, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'), $sortStyle);
 
 			if (env('APP_FILTERDUPLICATES', false)) {
 				$content = UtilsModule::filterDuplicates($content);
@@ -137,7 +137,7 @@ class ContentController extends BaseController {
 			$fetchdest = '/r/' . $sub . '/comments/' . ((strpos($ident, 't3_') !== false) ? substr($ident, 3) : $ident);
 		}
 
-		$data = CrawlerModule::fetchContent($fetchdest, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'));
+		$data = CrawlerModule::fetchContent($fetchdest, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'));
 		$data = $data[0];
 
 		if (isset($data->author)) {
@@ -201,7 +201,7 @@ class ContentController extends BaseController {
 		$ident = $request->arg('ident');
 		$ident = base64_decode($ident);
 
-		$data = CrawlerModule::fetchContent($ident, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'));
+		$data = CrawlerModule::fetchContent($ident, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'));
 		$data = $data[0];
 
 		if (isset($data->author)) {

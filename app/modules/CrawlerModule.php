@@ -182,7 +182,7 @@ class CrawlerModule
     {
         try {
             $image = CacheModel::remember($dest . '_thumbnail', env('APP_CACHEDURATION', self::CACHE_DURATION), function() use ($dest) {
-                $content = CrawlerModule::fetchContent($dest . '/', 'hot', '', array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'));
+                $content = CrawlerModule::fetchContent($dest . '/', 'hot', '', array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'));
                 if (count($content) > 0) {
                     return $content[0]->all->thumbnail;
                 } else {
@@ -230,7 +230,7 @@ class CrawlerModule
     {
         try {
             $data = CacheModel::remember($dest . '_content', env('APP_CACHEDURATION', self::CACHE_DURATION), function() use ($dest) {
-                $post = CrawlerModule::fetchContent($dest, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'external-preview.redd.it', 'redgifs'));
+                $post = CrawlerModule::fetchContent($dest, 'ignore', null, array('.gifv', 'reddit.com/gallery/', 'https://www.reddit.com/r/', 'v.reddit.com', 'v.redd.it'), array('i.redd.it', 'i.imgur.com', 'preview.redd.it', 'external-preview.redd.it', 'redgifs'));
                 
                 if (isset($post[0])) {
                     return json_encode($post[0]);
