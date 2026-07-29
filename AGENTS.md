@@ -11,7 +11,7 @@ The startup update script keeps dependencies fresh (`composer install`, `npm ins
 - **MariaDB** is not started automatically. Start it (data dir is initialized on first boot):
   - `sudo mariadbd --user=mysql &` (if `/var/lib/mysql/mysql` is missing, first run `sudo mariadb-install-db --user=mysql --datadir=/var/lib/mysql`).
   - The app connects as `root` with an empty password over TCP+socket (`mysql_native_password`). If root auth fails, run: `sudo mariadb -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED VIA mysql_native_password USING PASSWORD('');"`.
-- **Web app (dev server):** `php asatru serve 8000` (framework command; binds localhost) or `php -S 0.0.0.0:8000 -t public public/index.php`. Both route deep paths correctly. The `asatru` CLI only works with `APP_DEBUG=true` (already set in `.env`).
+- **Web app (dev server):** use `php asatru serve 8000` (framework command; binds localhost) or the equivalent `php -S 0.0.0.0:8000 -t public/`. Do NOT pass a router script (e.g. `... -t public public/index.php`): the private-mode middleware then 302-redirects every static asset (`css/bulma.css`, `js/*.js`, `img/*`) to `/auth`, so the UI loads completely unstyled. The plain `-t public/` form serves static files directly and still routes deep paths through `index.php`. The `asatru` CLI only works with `APP_DEBUG=true` (already set in `.env`).
 - **Frontend assets:** `npm run build` (or `npm run watch` during dev) produces `public/js/app.js`. `public/js/app.js` is tracked in git — do not commit rebuilt/minified diffs of it unless intended.
 
 ### Required one-time-per-fresh-DB setup (non-obvious gotchas)
